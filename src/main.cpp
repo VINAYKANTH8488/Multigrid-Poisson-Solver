@@ -97,7 +97,35 @@ double norm2(const vector<double>& v)
 
     return sqrt(sum);
 }
+void Jacobi(
+    const vector<vector<double>>& A,
+    vector<double>& x,
+    const vector<double>& b,
+    int maxIter)
+{
+    int N = A.size();
 
+    vector<double> xnew(N,0.0);
+
+    for(int iter=0; iter<maxIter; iter++)
+    {
+        for(int i=0;i<N;i++)
+        {
+            double sigma = 0.0;
+
+            for(int j=0;j<N;j++)
+            {
+                if(i!=j)
+                    sigma += A[i][j]*x[j];
+            }
+
+            xnew[i] =
+                (b[i]-sigma)/A[i][i];
+        }
+
+        x = xnew;
+    }
+}
 //=====================================================
 // Main
 //=====================================================
@@ -166,31 +194,56 @@ int main()
             b[p] = rhs(x, y);
         }
     }
+//-------------------------------------------------
+// Solve using Jacobi
+//-------------------------------------------------
 
-    //-------------------------------------------------
-    // Compute Residual
-    //-------------------------------------------------
+vector<double> u(N,0.0);
 
-    vector<double> r =
-        residual(A, uExact, b);
+Jacobi(A,u,b,100);
 
-    //-------------------------------------------------
-    // Output
-    //-------------------------------------------------
+//-------------------------------------------------
+// Residual after solving
+//-------------------------------------------------
 
-    cout << "\n====================================\n";
-    cout << " Manufactured Solution Test\n";
-    cout << "====================================\n";
+vector<double> r =
+    residual(A,u,b);
 
-    cout << "Grid Size : "
-         << nx << " x " << ny
-         << endl;
+//-------------------------------------------------
+// Compute L2 Error
+//-------------------------------------------------
 
-    cout << "Residual Norm = "
-         << norm2(r)
-         << endl;
+double error = 0.0;
 
-    cout << "====================================\n";
+for(int i=0;i<N;i++)
+{
+    error +=
+        pow(u[i]-uExact[i],2);
+}
 
-    return 0;
+error = sqrt(error);
+
+//-------------------------------------------------
+// Output
+//-------------------------------------------------
+
+cout << "\n=============================\n";
+cout << "Jacobi Solver Test\n";
+cout << "=============================\n";
+
+cout << "Grid Size : "
+     << nx << " x " << ny
+     << endl;
+
+cout << "Residual Norm = "
+     << norm2(r)
+     << endl;
+
+cout << "L2 Error = "
+     << error
+     << endl;
+
+cout << "=============================\n";
+
+return 0;
 }
