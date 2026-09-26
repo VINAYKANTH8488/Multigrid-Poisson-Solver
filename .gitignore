@@ -1,0 +1,4 @@
+multigrid
+*.o
+*.out
+*.csv
