@@ -2,38 +2,10 @@
 #include <vector>
 #include <cmath>
 
+#include "poisson.h"
+#include "smoothers.h"
+
 using namespace std;
-
-//=====================================================
-// Index Mapping
-//=====================================================
-
-int idx(int i, int j, int nx)
-{
-    return j * nx + i;
-}
-
-//=====================================================
-// Exact Solution
-// u = sin(pi*x)sin(pi*y)
-//=====================================================
-
-double exact(double x, double y)
-{
-    return sin(M_PI * x) * sin(M_PI * y);
-}
-
-//=====================================================
-// RHS corresponding to
-// -∇²u = f
-//=====================================================
-
-double rhs(double x, double y)
-{
-    return 2.0 * M_PI * M_PI *
-           sin(M_PI * x) *
-           sin(M_PI * y);
-}
 
 //=====================================================
 // Matrix Vector Product
@@ -97,35 +69,7 @@ double norm2(const vector<double>& v)
 
     return sqrt(sum);
 }
-void Jacobi(
-    const vector<vector<double>>& A,
-    vector<double>& x,
-    const vector<double>& b,
-    int maxIter)
-{
-    int N = A.size();
 
-    vector<double> xnew(N,0.0);
-
-    for(int iter=0; iter<maxIter; iter++)
-    {
-        for(int i=0;i<N;i++)
-        {
-            double sigma = 0.0;
-
-            for(int j=0;j<N;j++)
-            {
-                if(i!=j)
-                    sigma += A[i][j]*x[j];
-            }
-
-            xnew[i] =
-                (b[i]-sigma)/A[i][i];
-        }
-
-        x = xnew;
-    }
-}
 //=====================================================
 // Main
 //=====================================================
@@ -147,32 +91,9 @@ int main()
     // Build Poisson Matrix
     //-------------------------------------------------
 
-    vector<vector<double>> A(
-        N,
-        vector<double>(N, 0.0));
-
-    for (int j = 0; j < ny; j++)
-    {
-        for (int i = 0; i < nx; i++)
-        {
-            int p = idx(i, j, nx);
-
-            A[p][p] = 2.0 * (ax + ay);
-
-            if (i > 0)
-                A[p][idx(i - 1, j, nx)] = -ax;
-
-            if (i < nx - 1)
-                A[p][idx(i + 1, j, nx)] = -ax;
-
-            if (j > 0)
-                A[p][idx(i, j - 1, nx)] = -ay;
-
-            if (j < ny - 1)
-                A[p][idx(i, j + 1, nx)] = -ay;
-        }
-    }
-
+    vector<vector<double>> A =
+    buildPoissonMatrix(nx, ny);
+    
     //-------------------------------------------------
     // Exact Solution and RHS
     //-------------------------------------------------
@@ -195,55 +116,59 @@ int main()
         }
     }
 //-------------------------------------------------
-// Solve using Jacobi
+// Solve using Solvers
 //-------------------------------------------------
 
-vector<double> u(N,0.0);
+vector<double> uJ(N,0.0);
+vector<double> uGS(N,0.0);
+vector<double> uSOR(N,0.0);
 
-Jacobi(A,u,b,100);
+Jacobi(A,uJ,b,100);
+
+GaussSeidel(A,uGS,b,100);
+
+SOR(A,uSOR,b,100,1.7);
 
 //-------------------------------------------------
 // Residual after solving
 //-------------------------------------------------
 
-vector<double> r =
-    residual(A,u,b);
+vector<double> rJ =
+    residual(A,uJ,b);
+
+vector<double> rGS =
+    residual(A,uGS,b);
+
+vector<double> rSOR =
+    residual(A,uSOR,b);
 
 //-------------------------------------------------
 // Compute L2 Error
 //-------------------------------------------------
 
-double error = 0.0;
+double errorJ = 0.0;
 
 for(int i=0;i<N;i++)
 {
-    error +=
-        pow(u[i]-uExact[i],2);
+    errorJ +=
+        pow(uJ[i]-uExact[i],2);
 }
 
-error = sqrt(error);
+errorJ = sqrt(errorJ);
 
 //-------------------------------------------------
 // Output
 //-------------------------------------------------
+cout << "\nSolver Comparison\n";
+cout << "---------------------\n";
 
-cout << "\n=============================\n";
-cout << "Jacobi Solver Test\n";
-cout << "=============================\n";
+cout << "Jacobi Residual      = "
+     << norm2(rJ) << endl;
 
-cout << "Grid Size : "
-     << nx << " x " << ny
-     << endl;
+cout << "Gauss-Seidel Residual= "
+     << norm2(rGS) << endl;
 
-cout << "Residual Norm = "
-     << norm2(r)
-     << endl;
-
-cout << "L2 Error = "
-     << error
-     << endl;
-
-cout << "=============================\n";
-
+cout << "SOR Residual         = "
+     << norm2(rSOR) << endl;
 return 0;
 }
