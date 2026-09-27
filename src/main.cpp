@@ -4,6 +4,7 @@
 
 #include "poisson.h"
 #include "smoothers.h"
+#include "multigrid.h"
 
 using namespace std;
 
@@ -93,7 +94,7 @@ int main()
 
     vector<vector<double>> A =
     buildPoissonMatrix(nx, ny);
-    
+
     //-------------------------------------------------
     // Exact Solution and RHS
     //-------------------------------------------------
@@ -170,5 +171,29 @@ cout << "Gauss-Seidel Residual= "
 
 cout << "SOR Residual         = "
      << norm2(rSOR) << endl;
+vector<double> fineGrid =
+{
+     1,  2,  3,  4,
+     5,  6,  7,  8,
+     9, 10, 11, 12,
+    13, 14, 15, 16
+};
+
+vector<double> coarseGrid =
+    restrictResidual(
+        fineGrid,
+        4,
+        4);
+
+cout << "\nRestricted Grid\n";
+
+for(double v : coarseGrid)
+{
+    cout << v << " ";
+}
+
+cout << endl;
 return 0;
+
+
 }
